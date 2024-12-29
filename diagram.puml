@@ -1,0 +1,107 @@
+@startuml
+
+package "Vigenere Cipher Analyzer" {
+    
+    class App {
+        - {static} cipherBreaker: VigenereCipherBreaker
+        - {static} kasiskiAnalyzer: KasiskiAnalyzer
+        + {static} main(args: String[]): void
+    }
+
+    package entity {
+        class CipherText {
+            - text: String
+            - language: Language
+            + CipherText(text: String, language: Language)
+            + getText(): String
+            + getLanguage(): Language
+            + findRepeatingPatterns(length: int): Map<String, List<Integer>>
+            + getSubstrings(keyLength: int): List<String>
+        }
+
+        class Key {
+            - text: String
+            - language: Language
+            - possibleLengths: List<Integer>
+            + Key(text: String, language: Language)
+            + getText(): String
+            + getLanguage(): Language
+            + getPossibleLengths(): List<Integer>
+            + setPossibleLengths(lengths: List<Integer>): void
+            + setText(text: String): void
+            + setLanguage(language: Language): void
+        }
+    }
+
+    package interfaces {
+        interface ICipherText {
+            + getText(): String
+            + getLanguage(): Language
+            + findRepeatingPatterns(length: int): Map<String, List<Integer>>
+            + getSubstrings(keyLength: int): List<String>
+        }
+
+        interface IKey {
+            + getText(): String
+            + getLanguage(): Language
+            + getPossibleLengths(): List<Integer>
+            + setPossibleLengths(lengths: List<Integer>): void
+            + setText(text: String): void
+            + setLanguage(language: Language): void
+        }
+
+        interface ICipherBreaker {
+            + analyzeKey(cipherText: ICipherText): IKey
+            + decrypt(cipherText: ICipherText, key: IKey): String
+        }
+
+        interface ICryptographicText {
+            + getText(): String
+            + getLength(): int
+            + isValid(): boolean
+            + setText(text: String): void
+            + getLanguage(): Language
+            + setLanguage(language: Language): void
+        }
+    }
+
+    package service {
+        class VigenereCipherBreaker {
+            + analyzeKey(cipherText: ICipherText): IKey
+            + decrypt(cipherText: ICipherText, key: IKey): String
+        }
+
+        class KasiskiAnalyzer {
+            + findPossibleKeyLengths(cipherText: ICipherText): List<KeyLengthProbability>
+            
+            class KeyLengthProbability {
+                - length: int
+                - probability: double
+                + getLength(): int
+                + getProbability(): double
+                + toString(): String
+            }
+        }
+    }
+
+    package util {
+        enum Language {
+            ENGLISH
+            TURKISH
+        }
+    }
+
+    App --> VigenereCipherBreaker
+    App --> KasiskiAnalyzer
+    CipherText ..|> ICipherText
+    CipherText ..|> ICryptographicText
+    Key ..|> IKey
+    VigenereCipherBreaker ..|> ICipherBreaker
+    VigenereCipherBreaker ..> ICipherText
+    VigenereCipherBreaker ..> IKey
+    KasiskiAnalyzer ..> ICipherText
+    CipherText --> Language
+    Key --> Language
+}
+
+@enduml
