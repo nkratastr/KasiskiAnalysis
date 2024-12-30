@@ -77,61 +77,76 @@ public class App {
 
             System.out.println("\nNote: Final score is calculated based on pattern probability (60%) and coincidence index (40%) weights.");
             
-            // Get key length selection from user
-            System.out.println("\nBased on the above results, which key length would you like to use?");
-            System.out.print("Enter key length: ");
-            Scanner keyLengthScanner = new Scanner(System.in);
-            int selectedKeyLength = keyLengthScanner.nextInt();
+            // Use the highest probability key length first
+            int selectedKeyLength = keyLengthProbabilities.get(0).getLength();
+            System.out.println("\nAutomatically using the highest probability key length: " + selectedKeyLength);
 
-            // Find key using the most probable key length
-            System.out.println("\n3. Starting key analysis for length " + selectedKeyLength + "...");
-            cipherText.setExpectedKeyLength(selectedKeyLength);
-            IKey key = cipherBreaker.analyzeKey(cipherText);
-            
-            if (key == null) {
-                System.out.println("Key not found!");
-                return;
-            }
+            boolean tryAgain;
+            Scanner responseScanner = new Scanner(System.in);
+            do {
+                // Find key using selected key length
+                System.out.println("\n3. Starting key analysis for length " + selectedKeyLength + "...");
+                cipherText.setExpectedKeyLength(selectedKeyLength);
+                IKey key = cipherBreaker.analyzeKey(cipherText);
+                
+                if (key == null) {
+                    System.out.println("Key not found!");
+                    return;
+                }
 
-            // Display results
-            System.out.println("\nProbable key found: " + ANSI_RED + key.getText() + ANSI_RESET);
-            
-            // Decrypt text
-            System.out.println("\n4. Decrypting text...");
-            String plaintext = cipherBreaker.decrypt(cipherText, key);
-            
-            System.out.println("\nResults:");
-            System.out.println("---------");
-            System.out.println("Ciphertext: " + ciphertext);
-            System.out.println("Key: " + key.getText());
-            System.out.println("Decrypted text: " + plaintext);
+                // Display results
+                System.out.println("\nProbable key found: " + ANSI_RED + key.getText() + ANSI_RESET);
+                
+                // Decrypt text
+                System.out.println("\n4. Decrypting text...");
+                String plaintext = cipherBreaker.decrypt(cipherText, key);
+                
+                System.out.println("\nResults:");
+                System.out.println("---------");
+                System.out.println("Ciphertext: " + ciphertext);
+                System.out.println("Key: " + key.getText());
+                System.out.println("Decrypted text: " + plaintext);
+
+                // Ask if results are satisfactory
+                System.out.println("\nAre you satisfied with these results? (Y/N)");
+                String response = responseScanner.nextLine().toUpperCase();
+                
+                if (response.equals("N")) {
+                    System.out.println("\nAvailable key lengths:");
+                    for (int i = 0; i < keyLengthProbabilities.size(); i++) {
+                        KeyLengthProbability prob = keyLengthProbabilities.get(i);
+                        System.out.printf("%d. Length: %d (Score: %.2f%%)%n", 
+                            i + 1, prob.getLength(), prob.getFinalScore());
+                    }
+                    
+                    System.out.print("\nEnter the number of the key length you want to try (1-" + 
+                        keyLengthProbabilities.size() + "): ");
+                    try {
+                        int choice = Integer.parseInt(responseScanner.nextLine());
+                        if (choice > 0 && choice <= keyLengthProbabilities.size()) {
+                            selectedKeyLength = keyLengthProbabilities.get(choice - 1).getLength();
+                            tryAgain = true;
+                        } else {
+                            System.out.println("Invalid choice. Ending analysis.");
+                            tryAgain = false;
+                        }
+                    } catch (NumberFormatException e) {
+                        System.out.println("Invalid input. Ending analysis.");
+                        tryAgain = false;
+                    }
+                } else {
+                    tryAgain = false;
+                }
+            } while (tryAgain);
 
             // Language support information
             if (cipherText.getLanguage() != Language.ENGLISH) {
                 System.out.println("\nNote: Turkish language support will be added soon!");
             }
-            
-            // Ask user if results are reasonable
-            System.out.println("\nDo the results look reasonable? (Y/N)");
-            Scanner responseScanner = new Scanner(System.in);
-            String response = responseScanner.nextLine().toUpperCase();
-            
-            if (response.equals("N")) {
-                System.out.println("\nWould you like to try a different key length? (Y/N)");
-                response = responseScanner.nextLine().toUpperCase();
-                if (response.equals("Y")) {
-                    System.out.println("Which length would you like to try? (1-" + keyLengthProbabilities.size() + "):");
-                    int choice = Integer.parseInt(responseScanner.nextLine());
-                    if (choice > 0 && choice <= keyLengthProbabilities.size()) {
-                        int newLength = keyLengthProbabilities.get(choice - 1).getLength();
-                        System.out.println("This feature is not yet implemented. Selected length: " + newLength);
-                    }
-                }
-            }
-            
+
             // Ask user if they want to analyze in a different language
             System.out.println("\nWould you like to analyze in a different language? (Y/N)");
-            response = responseScanner.nextLine().toUpperCase();
+            String response = responseScanner.nextLine().toUpperCase();
             
             if (response.equals("Y")) {
                 System.out.println("Currently only English is supported.");
