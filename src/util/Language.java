@@ -39,4 +39,8 @@ public enum Language {
     };
 
     public abstract Map<Character, Double> getLetterFrequencies();
+
+    public boolean isValidCharacter(char c) {
+        return getLetterFrequencies().containsKey(Character.toUpperCase(c));
+    }
 }
