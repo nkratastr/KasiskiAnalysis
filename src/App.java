@@ -6,129 +6,140 @@ import service.KasiskiAnalyzer;
 import service.KasiskiAnalyzer.KeyLengthProbability;
 import util.Language;
 
-import java.io.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 public class App {
     private static final VigenereCipherBreaker cipherBreaker = new VigenereCipherBreaker();
     private static final KasiskiAnalyzer kasiskiAnalyzer = new KasiskiAnalyzer();
 
+    // ANSI renk kodları
+    private static final String ANSI_RED = "\u001B[31m";
+    private static final String ANSI_RESET = "\u001B[0m";
+
     public static void main(String[] args) {
         try {
-            System.out.println("Vigenère Cipher Kasiski Analizi");
+            System.out.println("Vigenère Cipher Kasiski Analysis");
             System.out.println("===============================");
             
-            String ciphertext;
+            // Read from console
+            System.out.println("\nPlease paste the ciphertext and press Enter twice:");
+            StringBuilder input = new StringBuilder();
+            Scanner scanner = new Scanner(System.in);
             
-            if (args.length > 0) {
-                // Dosyadan oku
-                ciphertext = new String(Files.readAllBytes(Paths.get(args[0]))).trim().toUpperCase();
-            } else {
-                // Konsoldan oku
-                System.out.println("\nLütfen şifreli metni yapıştırın ve iki kere Enter'a basın:");
-                StringBuilder input = new StringBuilder();
-                Scanner scanner = new Scanner(System.in);
-                
-                while (scanner.hasNextLine()) {
-                    String line = scanner.nextLine();
-                    if (line.isEmpty()) {
-                        if (input.length() > 0 && input.charAt(input.length() - 1) == '\n') {
-                            break;
-                        }
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                if (line.isEmpty()) {
+                    if (input.length() > 0 && input.charAt(input.length() - 1) == '\n') {
+                        break;
                     }
-                    input.append(line).append('\n');
                 }
-                
-                ciphertext = input.toString().trim().toUpperCase();
+                input.append(line).append('\n');
             }
             
+            String ciphertext = input.toString().trim().toUpperCase();
+            
             if (ciphertext.isEmpty()) {
-                System.out.println("Hata: Boş metin girdiniz!");
+                System.out.println("Error: Empty text entered!");
                 return;
             }
 
-            // CipherText nesnesini oluştur (varsayılan olarak İngilizce)
+            // Create CipherText object (default English)
             ICipherText cipherText = new CipherText(ciphertext, Language.ENGLISH);
             
-            System.out.println("\nAnaliz başlıyor...");
+            System.out.println("\nStarting analysis...");
             System.out.println("-------------------");
-            System.out.println("Analiz edilecek metin: " + ciphertext);
+            System.out.println("Text to analyze: " + ciphertext);
 
-            // Tekrar eden desenleri bul ve göster
-            System.out.println("\n1. Tekrar eden desenlerin analizi:");
+            // Find and display repeating patterns
+            System.out.println("\n1. Analysis of repeating patterns:");
             for (int length = 3; length <= 5; length++) {
                 Map<String, List<Integer>> patterns = cipherText.findRepeatingPatterns(length);
                 if (!patterns.isEmpty()) {
-                    System.out.println(length + " karakter uzunluğunda tekrar eden desenler:");
+                    System.out.println("Repeating patterns of length " + length + ":");
                     patterns.forEach((pattern, positions) -> 
-                        System.out.println("  " + pattern + " -> Pozisyonlar: " + positions));
+                        System.out.println("  " + pattern + " -> Positions: " + positions));
                 }
             }
 
-            // Olası anahtar uzunluklarını ve olasılıklarını göster
-            System.out.println("\n2. Olası anahtar uzunlukları ve olasılıkları:");
+            // Display possible key lengths and probabilities
+            System.out.println("\n2. Possible key lengths and probabilities:");
+            System.out.println("============================================");
             List<KeyLengthProbability> keyLengthProbabilities = kasiskiAnalyzer.findPossibleKeyLengths(cipherText);
             
+            System.out.println("\nResults (sorted by final score):");
+            System.out.println("-----------------------------------");
             for (int i = 0; i < keyLengthProbabilities.size(); i++) {
                 KeyLengthProbability prob = keyLengthProbabilities.get(i);
                 System.out.printf("%d. %s%n", i + 1, prob);
             }
 
-            // En olası anahtar uzunluğunu kullanarak anahtarı bul
-            System.out.println("\n3. Anahtar analizi başlıyor...");
+            System.out.println("\nNote: Final score is calculated based on pattern probability (60%) and coincidence index (40%) weights.");
+            
+            // Get key length selection from user
+            System.out.println("\nBased on the above results, which key length would you like to use?");
+            System.out.print("Enter key length: ");
+            Scanner keyLengthScanner = new Scanner(System.in);
+            int selectedKeyLength = keyLengthScanner.nextInt();
+
+            // Find key using the most probable key length
+            System.out.println("\n3. Starting key analysis for length " + selectedKeyLength + "...");
+            cipherText.setExpectedKeyLength(selectedKeyLength);
             IKey key = cipherBreaker.analyzeKey(cipherText);
             
             if (key == null) {
-                System.out.println("Anahtar bulunamadı!");
+                System.out.println("Key not found!");
                 return;
             }
 
-            // Sonuçları göster
-            System.out.println("\nBulunan muhtemel anahtar: " + key.getText());
+            // Display results
+            System.out.println("\nProbable key found: " + ANSI_RED + key.getText() + ANSI_RESET);
             
-            // Metni çöz
-            System.out.println("\n4. Metin çözülüyor...");
+            // Decrypt text
+            System.out.println("\n4. Decrypting text...");
             String plaintext = cipherBreaker.decrypt(cipherText, key);
             
-            System.out.println("\nSonuçlar:");
+            System.out.println("\nResults:");
             System.out.println("---------");
-            System.out.println("Şifreli metin: " + ciphertext);
-            System.out.println("Anahtar: " + key.getText());
-            System.out.println("Çözülmüş metin: " + plaintext);
+            System.out.println("Ciphertext: " + ciphertext);
+            System.out.println("Key: " + key.getText());
+            System.out.println("Decrypted text: " + plaintext);
+
+            // Language support information
+            if (cipherText.getLanguage() != Language.ENGLISH) {
+                System.out.println("\nNote: Turkish language support will be added soon!");
+            }
             
-            // Kullanıcıya sonuçların mantıklı olup olmadığını sor
-            System.out.println("\nSonuçlar mantıklı görünüyor mu? (E/H)");
+            // Ask user if results are reasonable
+            System.out.println("\nDo the results look reasonable? (Y/N)");
             Scanner responseScanner = new Scanner(System.in);
             String response = responseScanner.nextLine().toUpperCase();
             
-            if (response.equals("H")) {
-                System.out.println("\nFarklı bir anahtar uzunluğu denemek ister misiniz? (E/H)");
+            if (response.equals("N")) {
+                System.out.println("\nWould you like to try a different key length? (Y/N)");
                 response = responseScanner.nextLine().toUpperCase();
-                if (response.equals("E")) {
-                    System.out.println("Hangi uzunluğu denemek istersiniz? (1-" + keyLengthProbabilities.size() + "):");
+                if (response.equals("Y")) {
+                    System.out.println("Which length would you like to try? (1-" + keyLengthProbabilities.size() + "):");
                     int choice = Integer.parseInt(responseScanner.nextLine());
                     if (choice > 0 && choice <= keyLengthProbabilities.size()) {
                         int newLength = keyLengthProbabilities.get(choice - 1).getLength();
-                        System.out.println("Bu özellik henüz eklenmedi. Seçilen uzunluk: " + newLength);
+                        System.out.println("This feature is not yet implemented. Selected length: " + newLength);
                     }
                 }
             }
             
-            // Farklı dil seçeneği
-            System.out.println("\nBaşka bir dilde analiz yapmak ister misiniz? (E/H)");
+            // Ask user if they want to analyze in a different language
+            System.out.println("\nWould you like to analyze in a different language? (Y/N)");
             response = responseScanner.nextLine().toUpperCase();
             
-            if (response.equals("E")) {
-                System.out.println("Şu an için sadece İngilizce destekleniyor.");
-                System.out.println("Yakında Türkçe desteği de eklenecek!");
+            if (response.equals("Y")) {
+                System.out.println("Currently only English is supported.");
+                System.out.println("Turkish support will be added soon!");
             }
             
-        } catch (IOException e) {
-            System.out.println("Hata oluştu: " + e.getMessage());
+        } catch (Exception e) {
+            System.out.println("Error occurred: " + e.getMessage());
         }
     }
 }

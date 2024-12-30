@@ -8,10 +8,12 @@ import java.util.*;
 public class CipherText implements ICipherText {
     private final String text;
     private final Language language;
+    private int expectedKeyLength;
 
     public CipherText(String text, Language language) {
         this.text = text;
         this.language = language;
+        this.expectedKeyLength = 0;  // Default value
     }
 
     @Override
@@ -60,5 +62,15 @@ public class CipherText implements ICipherText {
         }
         
         return substrings;
+    }
+
+    @Override
+    public void setExpectedKeyLength(int length) {
+        this.expectedKeyLength = length;
+    }
+
+    @Override
+    public int getExpectedKeyLength() {
+        return expectedKeyLength;
     }
 }

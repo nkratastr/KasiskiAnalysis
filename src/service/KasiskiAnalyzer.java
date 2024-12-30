@@ -8,23 +8,31 @@ public class KasiskiAnalyzer {
     private static final int MAX_PATTERN_LENGTH = 7;
     private static final int MAX_KEY_LENGTH = 19;
 
-    public static class KeyLengthProbability {
+    public static class KeyLengthProbability implements Comparable<KeyLengthProbability> {
         private final int length;
         private final double probability;
         private final int patternCount;
         private final double indexOfCoincidence;
+        private final double finalScore;
+        private static final double PATTERN_WEIGHT = 0.6;  // Pattern probability weight
+        private static final double IOC_WEIGHT = 0.4;      // Index of Coincidence weight
 
         public KeyLengthProbability(int length, double probability, int patternCount, double indexOfCoincidence) {
             this.length = length;
             this.probability = probability;
             this.patternCount = patternCount;
             this.indexOfCoincidence = indexOfCoincidence;
+            
+            // Normalize IoC (typical range 0.06-0.08 for English)
+            double normalizedIoC = Math.min((indexOfCoincidence - 0.03) / 0.05, 1.0) * 100;
+            // Calculate final score (0-100)
+            this.finalScore = (probability * 100 * PATTERN_WEIGHT) + (normalizedIoC * IOC_WEIGHT);
         }
 
         @Override
         public String toString() {
-            return String.format("Uzunluk: %d, Olasılık: %.2f%%, Desen Sayısı: %d, Çakışma İndeksi: %.3f",
-                    length, probability * 100, patternCount, indexOfCoincidence);
+            return String.format("Length: %d | Pattern Probability: %.2f%% | Pattern Count: %d | Coincidence Index: %.3f | Final Score: %.2f%%",
+                    length, probability * 100, patternCount, indexOfCoincidence, finalScore);
         }
 
         public int getLength() {
@@ -33,6 +41,15 @@ public class KasiskiAnalyzer {
 
         public double getProbability() {
             return probability;
+        }
+
+        public double getFinalScore() {
+            return finalScore;
+        }
+
+        @Override
+        public int compareTo(KeyLengthProbability other) {
+            return Double.compare(other.finalScore, this.finalScore);  // Descending order
         }
     }
 
@@ -93,8 +110,8 @@ public class KasiskiAnalyzer {
             probabilities.add(new KeyLengthProbability(length, probability, patterns, ic));
         }
 
-        // Sort by probability descending
-        probabilities.sort((a, b) -> Double.compare(b.getProbability(), a.getProbability()));
+        // Sort by final score descending
+        probabilities.sort(KeyLengthProbability::compareTo);
         
         return probabilities;
     }

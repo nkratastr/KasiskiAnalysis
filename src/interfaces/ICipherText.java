@@ -9,4 +9,6 @@ public interface ICipherText {
     Language getLanguage();
     Map<String, List<Integer>> findRepeatingPatterns(int length);
     List<String> getSubstrings(int keyLength);
+    void setExpectedKeyLength(int length);
+    int getExpectedKeyLength();
 }

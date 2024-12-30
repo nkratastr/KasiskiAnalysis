@@ -17,15 +17,22 @@ public class VigenereCipherBreaker {
     }
 
     public IKey analyzeKey(ICipherText cipherText) {
-        // Olası anahtar uzunluklarını bul
-        List<KasiskiAnalyzer.KeyLengthProbability> keyLengthProbs = kasiskiAnalyzer.findPossibleKeyLengths(cipherText);
+        int keyLength;
         
-        if (keyLengthProbs.isEmpty()) {
-            return null;
-        }
+        // Kullanıcı tarafından belirtilen anahtar uzunluğunu kullan
+        if (cipherText.getExpectedKeyLength() > 0) {
+            keyLength = cipherText.getExpectedKeyLength();
+        } else {
+            // Olası anahtar uzunluklarını bul
+            List<KasiskiAnalyzer.KeyLengthProbability> keyLengthProbs = kasiskiAnalyzer.findPossibleKeyLengths(cipherText);
+            
+            if (keyLengthProbs.isEmpty()) {
+                return null;
+            }
 
-        // En yüksek olasılıklı anahtar uzunluğunu al
-        int keyLength = keyLengthProbs.get(0).getLength();
+            // En yüksek olasılıklı anahtar uzunluğunu al
+            keyLength = keyLengthProbs.get(0).getLength();
+        }
         
         // Metni anahtar uzunluğuna göre alt dizilere böl
         List<String> subTexts = cipherText.getSubstrings(keyLength);
