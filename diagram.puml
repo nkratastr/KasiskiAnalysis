@@ -12,9 +12,11 @@ package "Vigenere Cipher Analyzer" {
         class CipherText {
             - text: String
             - language: Language
+            - expectedKeyLength: int
             + CipherText(text: String, language: Language)
             + getText(): String
             + getLanguage(): Language
+            + setExpectedKeyLength(length: int)
             + findRepeatingPatterns(length: int): Map<String, List<Integer>>
             + getSubstrings(keyLength: int): List<String>
         }
@@ -37,6 +39,7 @@ package "Vigenere Cipher Analyzer" {
         interface ICipherText {
             + getText(): String
             + getLanguage(): Language
+            + setExpectedKeyLength(length: int)
             + findRepeatingPatterns(length: int): Map<String, List<Integer>>
             + getSubstrings(keyLength: int): List<String>
         }
@@ -67,19 +70,23 @@ package "Vigenere Cipher Analyzer" {
 
     package service {
         class VigenereCipherBreaker {
+            - kasiskiAnalyzer: KasiskiAnalyzer
             + analyzeKey(cipherText: ICipherText): IKey
             + decrypt(cipherText: ICipherText, key: IKey): String
         }
 
         class KasiskiAnalyzer {
             + findPossibleKeyLengths(cipherText: ICipherText): List<KeyLengthProbability>
+            - calculateCoincidenceIndex(text: String): double
+            - findFactors(number: int): List<Integer>
             
             class KeyLengthProbability {
                 - length: int
-                - probability: double
+                - patternProbability: double
+                - coincidenceIndex: double
+                - finalScore: double
                 + getLength(): int
-                + getProbability(): double
-                + toString(): String
+                + getFinalScore(): double
             }
         }
     }
@@ -102,6 +109,156 @@ package "Vigenere Cipher Analyzer" {
     KasiskiAnalyzer ..> ICipherText
     CipherText --> Language
     Key --> Language
+    VigenereCipherBreaker --> KasiskiAnalyzer
+    KasiskiAnalyzer --> KeyLengthProbability
 }
+
+
+skinparam backgroundColor white
+skinparam sequence {
+    ArrowColor DeepSkyBlue
+    LifeLineBorderColor blue
+    LifeLineBackgroundColor #A9DCDF
+    ParticipantBorderColor DeepSkyBlue
+    ParticipantBackgroundColor DodgerBlue
+    ParticipantFontName Impact
+    ParticipantFontSize 17
+    ParticipantFontColor #A9DCDF
+}
+
+actor User
+participant "App" as app
+participant "CipherText" as ct
+participant "KasiskiAnalyzer" as ka
+participant "VigenereCipherBreaker" as vcb
+
+User -> app: Enter ciphertext
+activate app
+
+app -> ct: create(ciphertext, language)
+activate ct
+ct --> app: cipherText object
+deactivate ct
+
+app -> ct: findRepeatingPatterns(length)
+activate ct
+ct --> app: patterns
+deactivate ct
+
+app -> ka: findPossibleKeyLengths(cipherText)
+activate ka
+ka --> app: keyLengthProbabilities
+deactivate ka
+
+app -> ct: setExpectedKeyLength(selectedKeyLength)
+activate ct
+ct --> app
+deactivate ct
+
+app -> vcb: analyzeKey(cipherText)
+activate vcb
+vcb --> app: key
+deactivate vcb
+
+app -> vcb: decrypt(cipherText, key)
+activate vcb
+vcb --> app: plaintext
+deactivate vcb
+
+app --> User: Display results
+deactivate app
+
+@enduml
+
+@startuml
+skinparam class {
+    BackgroundColor LightBlue
+    ArrowColor DeepSkyBlue
+    BorderColor Blue
+}
+
+class App {
+    -cipherBreaker: VigenereCipherBreaker
+    -kasiskiAnalyzer: KasiskiAnalyzer
+    +main(args: String[]): void
+}
+
+interface ICipherText {
+    +getText(): String
+    +getLanguage(): Language
+    +setExpectedKeyLength(length: int)
+    +findRepeatingPatterns(length: int)
+}
+
+class CipherText {
+    -text: String
+    -language: Language
+    -expectedKeyLength: int
+    +getText(): String
+    +getLanguage(): Language
+    +findRepeatingPatterns(length: int)
+}
+
+class VigenereCipherBreaker {
+    +analyzeKey(cipherText: ICipherText): IKey
+    +decrypt(cipherText: ICipherText, key: IKey): String
+}
+
+class KasiskiAnalyzer {
+    +findPossibleKeyLengths(cipherText: ICipherText)
+    -calculateCoincidenceIndex(text: String)
+    -findFactors(number: int)
+}
+
+enum Language {
+    ENGLISH
+    TURKISH
+}
+
+ICipherText <|.. CipherText
+App --> VigenereCipherBreaker
+App --> KasiskiAnalyzer
+CipherText --> Language
+
+@enduml
+
+@startuml
+skinparam ActivityBackgroundColor LightBlue
+skinparam ActivityBorderColor Blue
+skinparam ActivityDiamondBackgroundColor LightGray
+
+title Vigenère Cipher Analysis Process
+
+|User|
+start
+:Input Ciphertext;
+
+|#AntiqueWhite|System|
+:Create CipherText Object;
+:Find Repeating Patterns;
+
+|KasiskiAnalyzer|
+:Analyze Pattern Distances;
+:Calculate Probable Key Lengths;
+
+|System|
+:Select Most Likely Key Length;
+
+|VigenereCipherBreaker|
+:Perform Frequency Analysis;
+:Generate Key Candidates;
+:Attempt Decryption;
+
+|System|
+if (Decryption Successful?) then (yes)
+  :Display Plaintext;
+else (no)
+  :Try Alternative Key Length;
+  backward:Retry Analysis;
+endif
+
+|User|
+:Verify Results;
+stop
 
 @enduml
